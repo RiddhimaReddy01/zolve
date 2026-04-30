@@ -1,455 +1,84 @@
-# PROJECT_INSTRUCTIONS.md
-
-## Zolve Gamified Financial Ecosystem (Z-Coins System)
-
----
-
-## 0. Objective
-
-Design and implement a **closed-loop behavioral finance system** that:
-
-* Incentivizes financially responsible actions
-* Drives daily engagement and retention
-* Enables social reinforcement via clubs
-* Captures high-resolution behavioral + financial data
-* Monetizes via merchant partnerships, interchange amplification, and cross-sell timing
-
-This is **not a rewards system**.
-This is a **behavioral operating system layered on top of fintech infrastructure**.
-
----
-
-## 1. System Architecture Overview
-
-### Core Layers
-
-| Layer              | Function                         |
-| ------------------ | -------------------------------- |
-| Incentive Layer    | Z-Coins economy                  |
-| Commerce Layer     | Z-Kart marketplace               |
-| Status Layer       | Tier systems (individual + club) |
-| Social Layer       | Z-Clubs                          |
-| Engagement Layer   | Gamification mechanics           |
-| Intelligence Layer | Data flywheel                    |
-
-Each layer must be independently functional but tightly integrated via shared state.
-
----
-
-## 2. Z-Coins (Currency Engine)
-
-### Design Constraints
-
-* Non-withdrawable (closed-loop currency)
-* Earned via **financially desirable actions**
-* Inflation controlled via sinks (spend mechanisms)
-* Weighted earning (behavior > ads)
-
-### Earning Events (Priority Order)
-
-| Category             | Event                     | Weight            |
-| -------------------- | ------------------------- | ----------------- |
-| Financial Discipline | On-time payment           | High              |
-| Credit Improvement   | Score increase            | High              |
-| Savings Behavior     | Milestone achieved        | High              |
-| Banking Setup        | Direct deposit activation | Medium            |
-| Education            | Module completion         | Medium            |
-| Engagement           | Daily check-in            | Low               |
-| Ads                  | Optional viewing          | Very Low (capped) |
-| Growth               | Referrals                 | High              |
-| Exploration          | Easter eggs               | Variable          |
-
-### Spending Sinks
-
-* Z-Kart discounts
-* Club Deals
-* Auctions
-* Flash deals
-* Spin wheel entries
-
-**Constraint:**
-Total coin emission must be balanced by sinks → prevent inflation collapse.
-
----
-
-## 3. Z-Kart (Commerce Layer)
-
-### Core Function
-
-A **discount marketplace + intent capture engine**.
-
-### Features
-
-1. **Base Discount Layer**
-
-   * Default: ~10% (existing infrastructure)
-
-2. **Coin Boost Layer**
-
-   * Additional 5–10% via Z-Coins
-   * Dynamic pricing engine required
-
-3. **Price Comparison Hook**
-
-   * External benchmarking (e.g., Amazon parity)
-   * Goal: force **habitual pre-purchase check**
-
-4. **Brand Promotions**
-
-   * Sponsored placements
-   * Native integration (not banner ads)
-
-5. **Club Deals**
-
-   * Group-only pricing
-   * Unlock condition: minimum participants
-
-### Key Metric
-
-* **Pre-purchase interception rate**
-
----
-
-## 4. Tier System (Status Layer)
-
-### Individual Tier Logic
-
-Inputs:
-
-* Credit score
-* Coin balance / velocity
-* Completed behaviors
-
-| Tier   | Capabilities                      |
-| ------ | --------------------------------- |
-| Basic  | Entry features                    |
-| Silver | Multipliers, flash deals          |
-| Gold   | Auctions, ad-free, premium access |
-
-### Club Tier Logic
-
-Inputs:
-
-* Member tier homogeneity
-* Collective actions
-* Referrals
-
-| Tier   | Unlock                 |
-| ------ | ---------------------- |
-| Bronze | Default                |
-| Silver | Coordination achieved  |
-| Gold   | High-performance group |
-
-### Design Principle
-
-Status must be:
-
-* Visible
-* Earned
-* Difficult to fake
-
----
-
-## 5. Z-Clubs (Social Layer)
-
-### Structure
-
-* Size: 2–6 members
-* Shared coin pool (optional)
-* Persistent identity
-
-### Mechanics
-
-1. **Group Purchases**
-
-   * Initiated by one member
-   * Time-constrained participation
-
-2. **Referral Injection**
-
-   * New users enter via clubs
-   * Rewards distributed to all members
-
-3. **Club Quests**
-
-   * Coordinated actions required
-
-4. **Leaderboard**
-
-   * Competitive ranking
-
-### Behavioral Mechanism
-
-Peer pressure → compliance with financial discipline.
-
----
-
-## 6. Gamification Layer
-
-### 6.1 Scratch Cards
-
-Trigger:
-
-* Transactions > $20
-
-Reward Distribution:
-
-* Skewed probability
-* High “try again” rate (~40%)
-
-Goal:
-
-* Reinforce post-transaction app opens
-
----
-
-### 6.2 Spin Wheel
-
-Earning:
-
-* Action-based (not time-based)
-
-Rewards:
-
-* Coins
-* Multipliers
-* Vouchers
-* Access unlocks
-
-Goal:
-
-* Reinforce **cause → reward loop**
-
----
-
-### 6.3 Flash Deals
-
-Characteristics:
-
-* Time-limited
-* Quantity-limited
-* Tier-gated access
-
-Variants:
-
-* Fixed price
-* Auction-based
-
-Goal:
-
-* Induce urgency + repeat checking
-
----
-
-### 6.4 Easter Eggs
-
-Hidden triggers:
-
-* Time-based (midnight usage)
-* Consistency-based (payment streaks)
-* Identity-based (university referrals)
-
-Goal:
-
-* Organic virality
-* Power user identification
-
----
-
-### 6.5 Ads
-
-Constraints:
-
-* User-initiated only
-* Strict caps (3/day, 50 coins max)
-* Lower reward vs real behavior
-
-Goal:
-
-* Supplemental monetization without degrading experience
-
----
-
-## 7. Data Flywheel (Intelligence Layer)
-
-### Data Sources
-
-| Mechanic      | Signal               |
-| ------------- | -------------------- |
-| Scratch cards | Session timing       |
-| Spins         | Retention            |
-| Z-Kart        | Purchase intent      |
-| Price compare | Pre-buy intent       |
-| Ads           | Content preference   |
-| Clubs         | Social graph         |
-| Club deals    | Group intent         |
-| Referrals     | Influence network    |
-| Easter eggs   | Power users          |
-| Tiers         | Financial trajectory |
-
-### Output Model
-
-Unified user profile:
-
-```
-User Profile =
-{
-  financial_behavior,
-  purchase_intent,
-  social_graph,
-  engagement_pattern,
-  lifecycle_stage
-}
-```
-
-### Use Cases
-
-* Loan timing optimization
-* Insurance cross-sell
-* Telecom/SIM targeting
-* Credit limit adjustments
-
----
-
-## 8. Core System Requirements
-
-### Functional Requirements
-
-* Event-driven coin engine
-* Real-time tier recalculation
-* Dynamic pricing for Z-Kart
-* Club state synchronization
-* Reward probability engine
-* Behavioral logging pipeline
-
-### Non-Functional Requirements
-
-| Category    | Requirement                          |
-| ----------- | ------------------------------------ |
-| Latency     | <200ms for reward feedback           |
-| Scalability | Handle high-frequency events         |
-| Consistency | Strong consistency for coin balances |
-| Security    | Financial-grade compliance           |
-| Fairness    | Anti-gaming mechanisms               |
-
----
-
-## 9. Anti-Abuse Design
-
-* Detect artificial engagement loops
-* Cap low-value earning sources
-* Monitor abnormal referral graphs
-* Prevent coordinated fraud in clubs
-
----
-
-## 10. Success Metrics
-
-### Engagement
-
-* DAU / MAU
-* Session frequency
-* Retention (D1, D7, D30)
-
-### Financial Behavior
-
-* On-time payment rate
-* Credit score improvement rate
-* Savings adoption
-
-### Monetization
-
-* Merchant revenue
-* Interchange uplift
-* Cross-sell conversion
-
-### Network Effects
-
-* Club formation rate
-* Referral conversion rate
-
----
-
-## 11. Implementation Phases
-
-### Phase 1 — Core System
-
-* Z-Coins engine
-* Basic tiering
-* Scratch cards
-
-### Phase 2 — Commerce
-
-* Z-Kart integration
-* Price comparison
-* Sponsored deals
-
-### Phase 3 — Social Layer
-
-* Z-Clubs
-* Club deals
-* Leaderboards
-
-### Phase 4 — Advanced Gamification
-
-* Auctions
-* Easter eggs
-* Advanced rewards
-
-### Phase 5 — Data Intelligence
-
-* Behavioral modeling
-* Cross-sell engine
-* Personalization
-
----
-
-## 12. Strategic Positioning
-
-This system functions as:
-
-* A **behavioral reinforcement engine**
-* A **high-frequency engagement loop**
-* A **data acquisition layer**
-* A **distribution channel for financial products**
-
-Primary leverage comes from:
-
-> Converting low-frequency financial interactions into high-frequency behavioral signals.
-
----
-
-## 13. Critical Risks
-
-* Over-gamification → loss of trust
-* Coin inflation → reduced perceived value
-* Regulatory scrutiny (financial incentives)
-* User fatigue if rewards feel artificial
-
----
-
-## 14. Design Principle Summary
-
-1. Reward behavior, not activity
-2. Maintain scarcity in rewards
-3. Use social pressure, not just incentives
-4. Capture intent before transaction
-5. Optimize for long-term retention, not short-term engagement
-
----
-
-## 15. Final Note
-
-The system’s defensibility is not in features.
-
-It is in:
-
-* Behavioral lock-in
-* Data compounding
-* Social graph formation
-
-Execution quality will determine whether this becomes:
-
-* A gimmick
-  or
-* A durable financial ecosystem
+Z-World by ZolveTurn good financial behavior into a living economy
+The One Line:Zolve's existing users are financially responsible immigrants who open the app twice a month. Z-World makes them open it twice a day — by turning every financial action into currency, every visit into a game, and every friend group into a team.
+The Full System — 6 Pillars:
+1. Z-Coins (The Currency)Everything earns, everything costs, nothing cashes out directly.
+Earn by:
+Paying credit card on time
+Credit score improvement
+Hitting savings milestones
+Setting up direct deposit
+Completing financial education modules
+Daily check-in streak
+Watching ads (capped at 50 coins/day)
+Club referrals
+Easter egg discovery
+Spend at:
+Z-Kart (boosted discounts)
+Club Deals (group purchases)
+Auctions
+Flash deal redemptions
+Spin wheel entries (bonus spins)
+2. Z-Kart (The Store)Built on Zolve's existing 7,000+ merchant network.
+Basic tier: standard 10% off (already exists)
+Z-coins boost discounts to 15–20% on top
+Price compare against Amazon before buying — habitual check before every purchase
+Brand promoted deals — DoorDash, Spotify, Duolingo paying Zolve for access to immigrant demographic
+Club Deals section — group purchases unavailable to individual users
+3. Tier System (Individual + Club)
+Individual tiers based on credit score + coins accumulated + financial behaviors completed:
+Basic: standard access, 1 spin/day, scratch cards
+Silver: flash deal access, 2x spins, coin multipliers
+Gold: auction access, 3x spins, ad-free, exclusive drops, highest earn rate
+Club tiers based on collective behavior:
+Bronze: just formed
+Silver Club: all members Silver + 1 club quest completed
+Gold Club: all members Gold + 2 referrals + 3 club deals completed → exclusive merchant deals, leaderboard visibility, bonus multiplier on all individual earnings
+4. Z-Clubs (The Social Layer)The killer mechanic.
+Form clubs of 2–6 friends, roommates, university cohorts
+Shared coin pool for group purchases
+Club Deal initiator sends push to all members — "Priya started a Concert ticket deal. 2 hours to join."
+New user referral through club — entire club gets bonus coins when friend activates, new user joins club directly
+Club quests — complete together, multiply rewards
+Club leaderboard — competitive social status
+Peer pressure works for Zolve — "pay your bill, we're trying to hit Gold Club"
+5. Gamification (The Daily Pull)
+Scratch Cards
+Triggered by every transaction over $20
+Must open app to scratch
+Variable reward: 10 coins, 100 coins, flash deal unlock, merchant voucher, try again
+40% try again rate — keeps wins feeling earned
+Spin the Wheel
+Daily reset, earned through financial actions not just time
+Pay on time → 1 spin, score improves → 2 spins
+Prizes: coins, multipliers, vouchers, bonus club coins, flash deal access
+Flash Deals
+Time-limited, quantity-limited
+Gold early access → Silver → Basic
+Push notification fires at launch
+Auction variant for premium deals — bid Z-coins, watch if outbid, check constantly
+Easter Eggs (undisclosed, discovered organically)
+Open app at midnight → Night Owl (50 coins)
+Pay bill on exact due date 3 months straight → Precision badge
+Visa anniversary → One Year Strong reward
+Refer someone from same university → Campus Legend
+Entire club hits Gold together → Club Legend easter egg
+All generate WhatsApp word of mouth → free acquisition
+Ads
+Watch ad → earn coins (user initiated)
+Capped at 3 ads/day, 50 coins/day max
+Coins from behavior always worth more than coins from ads
+Gold tier is ad-free — incentive to reach Gold
+Brand promotions native inside Z-Kart — not banners, actual deals
+6. Data Flywheel (The Real Business)
+Every mechanic is a sensor:
+Scratch cards → session frequency, time of day patterns
+Spin wheel → daily retention rate
+Z-Kart browsing → purchase intent by category
+Price compare → what they're about to buy before they buy it
+Ad watching → content preferences
+Club formation → social graph
+Club deal choices → group purchase intent
+Referral patterns → influence nodes in community
+Easter egg discovery → power user identification
+Tier progression → financial health trajectory
+Combined output: individual financial profile + social graph + behavioral pattern + purchase intent. Worth significantly more than transaction data alone. Enables precise cross-sell of every Zolve product — loans, insurance, SIM — at exactly the right moment.

@@ -1,6 +1,6 @@
 """Pydantic models for request/response validation."""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -29,6 +29,7 @@ class BankLinkRequest(BaseModel):
     @field_validator("bank_name")
     @classmethod
     def validate_bank(cls, v: str) -> str:
+        v = v.replace(" Bank", "")
         if v not in MOCK_BANKS:
             raise ValueError(f"Bank must be one of {MOCK_BANKS}")
         return v
@@ -49,6 +50,44 @@ class ScratchCardRequest(BaseModel):
 class SpinWheelRequest(BaseModel):
     """Request to spin wheel."""
     user_id: int = Field(..., gt=0)
+
+
+class ZWorldOnboardingRequest(BaseModel):
+    """Request to complete the forced first-time Z-World onboarding."""
+    user_id: int = Field(..., gt=0)
+    club_action: Literal["create", "join"] = "create"
+    club_name: Optional[str] = Field(default=None, max_length=80)
+    invite_code: Optional[str] = Field(default=None, max_length=32)
+    accepted_coin_rules: bool
+
+    @model_validator(mode="after")
+    def validate_club_choice(self) -> "ZWorldOnboardingRequest":
+        if not self.accepted_coin_rules:
+            raise ValueError("accepted_coin_rules must be true")
+        if self.club_action == "create" and not self.club_name:
+            raise ValueError("club_name is required when club_action is create")
+        if self.club_action == "join" and not self.invite_code:
+            raise ValueError("invite_code is required when club_action is join")
+        return self
+
+
+class FinancialEventRequest(BaseModel):
+    """Request to process a financial behavior event through the reward engine."""
+    user_id: int = Field(..., gt=0)
+    event_type: str = Field(..., min_length=1, max_length=80)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AdStartRequest(BaseModel):
+    """Request to start watching an ad."""
+    user_id: int = Field(..., gt=0)
+    ad_id: str = Field(..., min_length=1)
+
+
+class AdCompleteRequest(BaseModel):
+    """Request to complete watching an ad."""
+    user_id: int = Field(..., gt=0)
+    ad_view_id: int = Field(..., gt=0)
 
 
 class CreditScoreUpdateRequest(BaseModel):
@@ -98,11 +137,20 @@ class BalanceResponse(BaseModel):
     """Response with user balance."""
     user_id: int
     balance: int
+    withdrawable_balance: int = 0
+    ecosystem_balance: int = 0
     tier: str
+
+
+class SpendingActionRequest(BaseModel):
+    """Request to spend coins on an ecosystem sink."""
+    user_id: int = Field(..., gt=0)
+    item_id: int = Field(..., gt=0)
 
 
 class BankLinkResponse(BaseModel):
     """Response for bank linking."""
+    success: bool = True
     user_id: int
     account_id: str
     bank_name: str
@@ -141,6 +189,9 @@ class SpinWheelResponse(BaseModel):
     segment_number: int
     coins_won: int
     message: str
+    cost_paid: int = 0
+    used_earned_spin: bool = False
+    spins_remaining: int = 0
 
 
 class ErrorResponse(BaseModel):

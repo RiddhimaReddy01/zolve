@@ -555,6 +555,7 @@ inject_styles()
 
 # Get user data
 user_data = get_user_data()
+z_world_data = api_get(f"/api/z-world/dashboard/{st.session_state.user_id}") if user_data else None
 
 # Main page layout
 st.markdown(
@@ -591,6 +592,93 @@ with tab1:
     )
 
     if user_data:
+        if z_world_data:
+            st.markdown(
+                "<div class='section-header'>Z-World</div>",
+                unsafe_allow_html=True,
+            )
+            intro = api_get("/api/z-world/intro")
+            if z_world_data["onboarding"]["required"]:
+                st.markdown(
+                    f"<div class='info-box'><strong>{intro['value_proposition'] if intro else 'Earn rewards for financial behavior'}</strong></div>",
+                    unsafe_allow_html=True,
+                )
+                with st.form("z_world_onboarding_form"):
+                    club_name = st.text_input("Create a Z-Club", value="Credit Builders")
+                    accepted = st.checkbox("I accept the Z-Coin rules")
+                    submitted = st.form_submit_button("Enter Z-World", use_container_width=True)
+                    if submitted:
+                        result = api_post(
+                            "/api/z-world/onboarding/complete",
+                            {
+                                "user_id": st.session_state.user_id,
+                                "club_action": "create",
+                                "club_name": club_name,
+                                "accepted_coin_rules": accepted,
+                            },
+                        )
+                        if result and result.get("success"):
+                            st.markdown(
+                                "<div class='success-box'><strong>Z-World activated.</strong> Signup bonus and your first scratch card are ready.</div>",
+                                unsafe_allow_html=True,
+                            )
+                            st.balloons()
+                            st.rerun()
+            else:
+                loop = z_world_data["daily_loop"]
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    display_hero_metric("Earned Spins", loop["spins_available"], "")
+                with col_b:
+                    display_hero_metric("Scratch Cards", loop["scratch_cards_available"], "")
+                with col_c:
+                    if st.button("Grant Today's Spin", use_container_width=True):
+                        result = api_post(f"/api/z-world/daily-engagement/{st.session_state.user_id}", {})
+                        if result:
+                            st.rerun()
+
+                notification = loop.get("latest_notification")
+                if notification:
+                    st.markdown(
+                        f"<div class='success-box'><strong>{notification['title']}</strong><br/>{notification['message']}</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button("Use Earned Spin", use_container_width=True):
+                        result = api_post("/api/games/spin", {"user_id": st.session_state.user_id})
+                        if result:
+                            cost = "earned spin" if result.get("used_earned_spin") else f"{result.get('cost_paid', 0)} coins"
+                            st.markdown(
+                                f"<div class='success-box'><strong>Won {result['coins_won']} coins.</strong><br/>Used {cost}.</div>",
+                                unsafe_allow_html=True,
+                            )
+                with col_b:
+                    if st.button("Simulate On-Time Payment", use_container_width=True):
+                        result = api_post(
+                            "/api/z-world/financial-events",
+                            {
+                                "user_id": st.session_state.user_id,
+                                "event_type": "payment_completed_on_time",
+                                "metadata": {"source": "streamlit_demo"},
+                            },
+                        )
+                        if result:
+                            st.markdown(
+                                f"<div class='success-box'><strong>Payment rewarded.</strong><br/>+{result['coins_awarded']} coins and {result['spins_unlocked']} spins unlocked.</div>",
+                                unsafe_allow_html=True,
+                            )
+                            st.rerun()
+
+                for action in loop["next_actions"][:3]:
+                    st.markdown(
+                        f"<div class='action-card'><strong>{action['label']}</strong></div>",
+                        unsafe_allow_html=True,
+                    )
+
+            st.markdown("<div class='divider-accent'></div>", unsafe_allow_html=True)
+
         # Tier progress section
         tier_data = api_get(f"/api/tier-progress/{st.session_state.user_id}")
         if tier_data:

@@ -63,6 +63,26 @@ def calculate_user_tier(coin_balance: int, verified_behavior_count: int) -> str:
     return "Basic"
 
 
+def maybe_record_tier_change(db, user_id: int, old_tier: str, coin_balance: int, verified_count: int) -> str:
+    """Check if user tier has changed and record the event if so.
+
+    Args:
+        db: Database instance
+        user_id: User ID
+        old_tier: Previous tier before any new coins/behaviors
+        coin_balance: Current coin balance
+        verified_count: Current verified behavior count
+
+    Returns:
+        New tier name (Basic, Silver, or Gold)
+    """
+    new_tier = calculate_user_tier(coin_balance, verified_count)
+    if new_tier != old_tier:
+        db.update_user_tier(user_id, new_tier)
+        db.add_tier_event(user_id, old_tier, new_tier, coin_balance, verified_count)
+    return new_tier
+
+
 def play_scratch_card() -> Dict[str, Any]:
     """Play scratch card game.
 
@@ -95,21 +115,51 @@ def play_scratch_card() -> Dict[str, Any]:
     }
 
 
+def play_spin_wheel_for_user(verified_behavior_count: int) -> Dict[str, Any]:
+    """Play spin wheel game with behavior-based probability boost.
+
+    Base weights: [30, 25, 20, 15, 7, 3] for segments [1-6]
+    For each verified behavior (capped at 5), shift 3 weight from segments 1,2 to 5,6.
+    Wheel rewards: [50, 100, 200, 300, 500, 1000]
+
+    Args:
+        verified_behavior_count: Number of verified behaviors for the user
+
+    Returns:
+        dict with segment_number, coins_won, and message
+    """
+    BASE_WEIGHTS = [30, 25, 20, 15, 7, 3]
+    weights = BASE_WEIGHTS.copy()
+
+    # Apply behavior-based boost: shift weight from low to high segments
+    boosts = min(verified_behavior_count, 5)
+    for _ in range(boosts):
+        # Shift 3 weight from segments 1,2 (indices 0,1) to segments 5,6 (indices 4,5)
+        shift = min(3, weights[0], weights[1])
+        weights[0] -= shift
+        weights[1] -= shift
+        weights[4] += shift
+        weights[5] += shift
+
+    # Use random.choices to select segment based on adjusted weights
+    segment = random.choices(range(1, 7), weights=weights, k=1)[0]
+    coins_won = SPIN_WHEEL_REWARDS[segment - 1]
+    return {
+        "segment_number": segment,
+        "coins_won": coins_won,
+        "message": f"You landed on Segment {segment}! Won {coins_won} coins! 🎉",
+    }
+
+
 def play_spin_wheel() -> Dict[str, Any]:
-    """Play spin wheel game.
+    """Play spin wheel game (legacy, no behavior boost).
 
     Wheel has 6 segments with rewards: [50, 100, 200, 300, 500, 1000]
 
     Returns:
         dict with segment_number, coins_won, and message
     """
-    segment = random.randint(1, 6)
-    coins = SPIN_WHEEL_REWARDS[segment - 1]
-    return {
-        "segment_number": segment,
-        "coins_won": coins,
-        "message": f"You landed on Segment {segment}! Won {coins} coins! 🎉",
-    }
+    return play_spin_wheel_for_user(0)
 
 
 def _get_scratch_card_message(result_type: str, coins: int) -> str:
@@ -234,32 +284,31 @@ def _generate_mock_bank_data(bank_name: str, account_number: str) -> Dict[str, A
     Returns:
         Mock bank data with transactions
     """
-    transactions = [
-        {
-            "date": "2024-01-15",
-            "description": "Credit Card Payment",
-            "amount": 5000,
-            "due_date": "2024-01-20",
-            "is_on_time": True,
-            "status": "completed",
-        },
-        {
-            "date": "2024-01-10",
-            "description": "EMI Debit",
-            "amount": 2000,
-            "due_date": "2024-01-12",
-            "is_on_time": True,
-            "status": "completed",
-        },
-        {
-            "date": "2024-01-05",
-            "description": "Monthly Salary",
-            "amount": 50000,
-            "due_date": None,
-            "is_on_time": True,
-            "status": "completed",
-        },
+    templates = [
+        ("Credit Card Payment", 5200, True, True),
+        ("Rent Payment", 18500, True, True),
+        ("EMI Debit", 3100, True, True),
+        ("Monthly Salary Deposit", 78000, False, True),
+        ("Mutual Fund SIP", 5000, True, True),
+        ("Grocery Spend", 2400, False, False),
+        ("Utility Bill Payment", 1800, True, True),
+        ("UPI Transfer", 900, False, False),
+        ("Emergency Fund Deposit", 6000, False, True),
     ]
+    transactions = []
+    for i in range(150):
+        description, amount, has_due_date, is_on_time = templates[i % len(templates)]
+        month = 1 + (i // 28)
+        day = 1 + (i % 28)
+        due_day = min(day + 4, 28)
+        transactions.append({
+            "date": f"2026-{month:02d}-{day:02d}",
+            "description": description,
+            "amount": amount,
+            "due_date": f"2026-{month:02d}-{due_day:02d}" if has_due_date else None,
+            "is_on_time": is_on_time,
+            "status": "completed",
+        })
 
     return {
         "account_id": f"{bank_name}_{account_number}",

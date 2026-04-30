@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 
 from models import BankLinkRequest, BankLinkResponse, VerificationResponse
 from database import Database
-from game_engine import verify_bank_behavior, verify_credit_score, generate_mock_credit_score
+from game_engine import verify_bank_behavior, verify_credit_score, generate_mock_credit_score, calculate_user_tier, maybe_record_tier_change
 from exceptions import BankVerificationError, UserNotFoundError
 
 router = APIRouter(prefix="/api/bank", tags=["bank"])
@@ -118,6 +118,7 @@ async def verify_behaviors(user_id: int) -> List[VerificationResponse]:
                 if not _is_duplicate_behavior(behavior, existing):
                     # Award coins
                     db.update_user_balance(user_id, behavior["coins"])
+                    db.update_withdrawable_balance(user_id, behavior["coins"])
 
                     # Log behavior
                     import json
@@ -154,6 +155,7 @@ async def verify_behaviors(user_id: int) -> List[VerificationResponse]:
         if credit_behavior:
             # Update credit score
             db.update_user_balance(user_id, credit_behavior["coins"])
+            db.update_withdrawable_balance(user_id, credit_behavior["coins"])
 
             import json
             db.add_behavior(
@@ -180,6 +182,16 @@ async def verify_behaviors(user_id: int) -> List[VerificationResponse]:
                     details=credit_behavior["details"],
                 )
             )
+
+        updated_user = db.get_user(user_id)
+        verified_count = db.count_verified_behaviors(user_id)
+        maybe_record_tier_change(
+            db,
+            user_id,
+            updated_user["tier"],
+            updated_user["coin_balance"],
+            verified_count,
+        )
 
         return verified_behaviors
 
@@ -225,37 +237,45 @@ async def get_credit_score(user_id: int) -> Dict[str, Any]:
 
 def _get_mock_transactions(bank_name: str, account_number: str) -> List[Dict[str, Any]]:
     """Get mock bank transactions."""
-    return [
-        {
-            "date": "2024-01-15",
-            "description": "Credit Card Payment",
-            "amount": 5000,
-            "due_date": "2024-01-20",
-            "is_on_time": True,
-            "status": "completed",
-        },
-        {
-            "date": "2024-01-10",
-            "description": "EMI Debit",
-            "amount": 2000,
-            "due_date": "2024-01-12",
-            "is_on_time": True,
-            "status": "completed",
-        },
-        {
-            "date": "2024-01-05",
-            "description": "Monthly Salary Deposit",
-            "amount": 50000,
-            "due_date": None,
-            "is_on_time": True,
-            "status": "completed",
-        },
+    descriptions = [
+        ("Credit Card Payment", -5200, True),
+        ("Rent Payment", -18500, True),
+        ("EMI Debit", -3100, True),
+        ("Monthly Salary Deposit", 78000, True),
+        ("Mutual Fund SIP", -5000, True),
+        ("Grocery Spend", -2400, False),
+        ("Utility Bill Payment", -1800, True),
+        ("UPI Transfer", -900, False),
+        ("Emergency Fund Transfer", -6000, True),
     ]
+    transactions = []
+    for i in range(150):
+        description, amount, is_behavior = descriptions[i % len(descriptions)]
+        month = 1 + (i // 28)
+        day = 1 + (i % 28)
+        due_day = min(day + 4, 28)
+        transactions.append({
+            "date": f"2026-{month:02d}-{day:02d}",
+            "description": description,
+            "amount": abs(amount),
+            "due_date": f"2026-{month:02d}-{due_day:02d}" if amount < 0 else None,
+            "is_on_time": is_behavior,
+            "status": "completed",
+            "bank_name": bank_name,
+            "account_number_last4": account_number[-4:],
+        })
+    return transactions
 
 
 def _is_duplicate_behavior(behavior: Dict[str, Any], existing: List[Dict[str, Any]]) -> bool:
     """Check if behavior already exists (avoid double-awarding)."""
+    import json
+
+    behavior_data = json.dumps(behavior["details"], sort_keys=True)
     for existing_b in existing:
-        if existing_b["behavior_type"] == behavior["behavior_type"]:
+        if (
+            existing_b["behavior_type"] == behavior["behavior_type"]
+            and existing_b["behavior_data"] == behavior_data
+        ):
             return True
     return False

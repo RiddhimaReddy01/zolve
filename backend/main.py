@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import coins, marketplace, games, bank
+from routes import coins, marketplace, games, bank, spending, clubs, club_deals, ads, z_world
 from database import Database
 from models import ErrorResponse
 
@@ -29,6 +29,11 @@ app.include_router(coins.router)
 app.include_router(marketplace.router)
 app.include_router(games.router)
 app.include_router(bank.router)
+app.include_router(spending.router)
+app.include_router(clubs.router)
+app.include_router(club_deals.router)
+app.include_router(ads.router)
+app.include_router(z_world.router)
 
 # Initialize database
 db = Database()
@@ -71,6 +76,8 @@ async def get_user_dashboard(user_id: int) -> dict:
             "name": user["name"],
             "email": user["email"],
             "balance": user["coin_balance"],
+            "withdrawable_balance": user.get("withdrawable_balance", 0),
+            "ecosystem_balance": user["coin_balance"] - user.get("withdrawable_balance", 0),
             "tier": user["tier"],
             "credit_score": user["credit_score"],
             "verified_behaviors_count": verified_count,
@@ -132,16 +139,17 @@ async def get_verified_behaviors(user_id: int) -> dict:
 
 @app.get("/api/tier-progress/{user_id}")
 async def get_tier_progress(user_id: int) -> dict:
-    """Get user's progress toward next tier.
+    """Get user's progress toward next tier with benefits information.
 
     Args:
         user_id: User ID
 
     Returns:
-        Tier progress data
+        Tier progress data including current benefits and next tier benefits
     """
     try:
         from game_engine import calculate_tier_progress
+        from constants import TIER_BENEFITS
 
         user = db.get_user(user_id)
         if not user:
@@ -150,7 +158,68 @@ async def get_tier_progress(user_id: int) -> dict:
         verified_count = db.count_verified_behaviors(user_id)
         progress = calculate_tier_progress(user["coin_balance"], verified_count)
 
+        # Add tier benefits information
+        current_tier = progress["current_tier"]
+        progress["benefits"] = TIER_BENEFITS.get(current_tier, {})
+
+        # Add next tier benefits if not at Gold
+        if progress["next_tier"]:
+            progress["next_tier_benefits"] = TIER_BENEFITS.get(progress["next_tier"], {})
+        else:
+            progress["next_tier_benefits"] = None
+
+        # Add tier history
+        tier_history = db.get_tier_history(user_id)
+        progress["tier_history"] = [
+            {
+                "old_tier": event["old_tier"],
+                "new_tier": event["new_tier"],
+                "coins_at_change": event["coins_at_change"],
+                "behaviors_at_change": event["behaviors_at_change"],
+                "changed_at": event["changed_at"],
+            }
+            for event in tier_history
+        ]
+
         return progress
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.get("/api/tier-history/{user_id}")
+async def get_tier_history(user_id: int) -> dict:
+    """Get user's tier progression history.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        User's current tier and complete tier event history
+    """
+    try:
+        user = db.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        tier_history = db.get_tier_history(user_id)
+
+        return {
+            "user_id": user_id,
+            "current_tier": user["tier"],
+            "tier_history": [
+                {
+                    "id": event["id"],
+                    "old_tier": event["old_tier"],
+                    "new_tier": event["new_tier"],
+                    "coins_at_change": event["coins_at_change"],
+                    "behaviors_at_change": event["behaviors_at_change"],
+                    "changed_at": event["changed_at"],
+                }
+                for event in tier_history
+            ],
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -177,6 +246,7 @@ async def get_leaderboard(limit: int = 10) -> dict:
                     "user_id": user["id"],
                     "name": user["name"],
                     "balance": user["coin_balance"],
+                    "withdrawable_balance": user.get("withdrawable_balance", 0),
                     "tier": user["tier"],
                 }
             ],
