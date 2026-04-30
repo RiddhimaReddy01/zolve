@@ -1,6 +1,7 @@
 """Z-Kart marketplace endpoints."""
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 from typing import List, Dict, Any
 
 from models import PurchaseRequest
@@ -29,6 +30,7 @@ def _discounted_price(product: Dict[str, Any]) -> float:
 
 def _product_response(product: Dict[str, Any]) -> Dict[str, Any]:
     final_price = _discounted_price(product)
+    bonus_value = round(product["base_price"] - final_price, 2)
     return {
         "id": product["id"],
         "name": product["name"],
@@ -40,11 +42,44 @@ def _product_response(product: Dict[str, Any]) -> Dict[str, Any]:
         "stock": product["stock"],
         "final_price": final_price,
         "discounted_price": final_price,
+        "image_url": product.get("image_url"),
+        "description": product.get("description") or "Exclusive Z-Kart offer with boosted savings when you use Z-Coins.",
+        "rating": product.get("rating", 4.6),
+        "review_count": product.get("review_count", 0),
+        "bonus_value": bonus_value,
+        "bonus_label": f"Save ${bonus_value:.2f} when you use {product['coins_required']} Z-Coins",
+        "reviews": [
+            {
+                "author": "Maya",
+                "rating": 5,
+                "text": "Amazing! I used my Z-Coins and saved 15% on top of the regular price. The redemption was super smooth. Definitely buying again!",
+            },
+            {
+                "author": "Aarav",
+                "rating": 4,
+                "text": "Good value for money. The Z-Coin discount actually matters—paid way less than I would have elsewhere.",
+            },
+            {
+                "author": "Priya",
+                "rating": 5,
+                "text": "Love how my financial wins turn into shopping rewards! The price breakdown shows exactly how much I saved with coins. Worth it.",
+            },
+            {
+                "author": "Rohit",
+                "rating": 5,
+                "text": "First time using Z-Coins here and I'm impressed. The product arrived quickly and the savings felt real. Highly recommend!",
+            },
+            {
+                "author": "Neha",
+                "rating": 4,
+                "text": "Great selection and fair pricing. The coin discount makes a tangible difference. Looking forward to using this more.",
+            },
+        ],
     }
 
 
-@router.get("/products", response_model=List[Dict[str, Any]])
-async def list_products(category: str = None) -> List[Dict[str, Any]]:
+@router.get("/products")
+async def list_products(category: str = None):
     """List all products, optionally filtered by category.
 
     Args:
@@ -59,13 +94,14 @@ async def list_products(category: str = None) -> List[Dict[str, Any]]:
         if category:
             products = [p for p in products if p["category"].lower() == category.lower()]
 
-        return [_product_response(p) for p in products]
+        response_data = [_product_response(p) for p in products]
+        return JSONResponse(content=response_data)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/products/{product_id}", response_model=Dict[str, Any])
-async def get_product(product_id: int) -> Dict[str, Any]:
+@router.get("/products/{product_id}")
+async def get_product(product_id: int):
     """Get product details.
 
     Args:
@@ -79,15 +115,16 @@ async def get_product(product_id: int) -> Dict[str, Any]:
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-        return _product_response(product)
+        response_data = _product_response(product)
+        return JSONResponse(content=response_data)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/purchase", response_model=Dict[str, Any])
-async def purchase_product(request: PurchaseRequest) -> Dict[str, Any]:
+@router.post("/purchase")
+async def purchase_product(request: PurchaseRequest):
     """Purchase a product with coins.
 
     Args:
@@ -167,7 +204,14 @@ async def purchase_product(request: PurchaseRequest) -> Dict[str, Any]:
             scratch_card_triggered = False
             scratch_card_id = None
             if final_price > 20.0:
-                scratch_card_id = db.add_scratch_card_trigger(request.user_id, purchase_id, final_price)
+                cursor.execute(
+                    """
+                    INSERT INTO scratch_card_triggers (user_id, purchase_id, purchase_amount)
+                    VALUES (?, ?, ?)
+                    """,
+                    (request.user_id, purchase_id, final_price),
+                )
+                scratch_card_id = cursor.lastrowid
                 scratch_card_triggered = True
 
         response = {
@@ -193,8 +237,8 @@ async def purchase_product(request: PurchaseRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/categories", response_model=List[str])
-async def get_categories() -> List[str]:
+@router.get("/categories")
+async def get_categories():
     """Get all product categories.
 
     Returns:
@@ -203,6 +247,6 @@ async def get_categories() -> List[str]:
     try:
         products = db.get_all_products()
         categories = sorted(set(p["category"] for p in products))
-        return categories
+        return JSONResponse(content=categories)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

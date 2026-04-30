@@ -143,9 +143,17 @@ class Database:
                     coin_discount_pct INTEGER DEFAULT 5,
                     coins_required INTEGER NOT NULL,
                     stock INTEGER DEFAULT 100,
+                    image_url TEXT,
+                    description TEXT,
+                    rating REAL DEFAULT 4.5,
+                    review_count INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            self._ensure_column(cursor, "products", "image_url", "TEXT")
+            self._ensure_column(cursor, "products", "description", "TEXT")
+            self._ensure_column(cursor, "products", "rating", "REAL DEFAULT 4.5")
+            self._ensure_column(cursor, "products", "review_count", "INTEGER DEFAULT 0")
 
             # Purchases
             cursor.execute("""
@@ -219,6 +227,7 @@ class Database:
                     intro_seen BOOLEAN DEFAULT 0,
                     club_action TEXT,
                     club_name TEXT,
+                    club_id INTEGER,
                     invite_code TEXT,
                     accepted_coin_rules BOOLEAN DEFAULT 0,
                     signup_bonus_granted BOOLEAN DEFAULT 0,
@@ -226,6 +235,7 @@ class Database:
                     completed_at TIMESTAMP
                 )
             """)
+            self._ensure_column(cursor, "z_world_onboarding", "club_id", "INTEGER")
 
             # Spin entitlements earned by actions, separate from coin-paid spins
             cursor.execute("""
@@ -356,39 +366,59 @@ class Database:
                 """, (name, category, price, discount, coins_req, stock))
 
     def _seed_products(self, cursor: sqlite3.Cursor) -> None:
-        """Seed 120 synthetic Z-Kart products across realistic categories."""
+        """Seed Z-Kart products with images and descriptions."""
         cursor.execute("DELETE FROM products")
-        brands = [
-            ("Starbucks Gift Card", "Food", 500, 10, 250),
-            ("Swiggy Voucher", "Food", 500, 10, 250),
-            ("Blinkit Coupon", "Food", 500, 10, 250),
-            ("Amazon Gift Card", "Retail", 1000, 8, 500),
-            ("Flipkart Voucher", "Retail", 1000, 8, 500),
-            ("Myntra Style Pass", "Retail", 1500, 9, 700),
-            ("MakeMyTrip Voucher", "Travel", 1500, 7, 750),
-            ("Uber Ride Credits", "Travel", 600, 6, 280),
-            ("Netflix Subscription", "Entertainment", 199, 12, 100),
-            ("Spotify Premium", "Entertainment", 119, 15, 60),
-            ("Cult Fit Trial", "Fitness", 999, 10, 450),
-            ("Decathlon Voucher", "Fitness", 2000, 5, 1000),
+        products = [
+            # Food & Delivery (4 items, 100-200 coins)
+            ("Starbucks $50 Gift Card", "Food", 50, 15, 200, "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=300&fit=crop", "Premium coffee and fresh pastries. Perfect daily treat with Z-Coin savings."),
+            ("Swiggy ₹500 Voucher", "Food", 50, 12, 220, "https://images.unsplash.com/photo-1504674900874-dde2893a9915?w=300&h=300&fit=crop", "Order your favorite meals with fast delivery. Z-Coin discount saves you cash."),
+            ("Domino's Pizza ₹1000", "Food", 30, 15, 120, "https://images.unsplash.com/photo-1628840042765-356cda07f857?w=300&h=300&fit=crop", "Two medium pizzas coupon. Enjoy pizza night savings with Z-Coins."),
+            ("McDonald's Breakfast Pass", "Food", 25, 18, 100, "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=300&fit=crop", "5 breakfast vouchers included. Great value when purchased with coins."),
+
+            # Shopping & Retail (4 items, 400-500 coins)
+            ("Amazon ₹5000 Gift Card", "Retail", 100, 10, 450, "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=300&h=300&fit=crop", "Shop millions of products from electronics to fashion. Maximize savings with Z-Coins."),
+            ("Flipkart ₹5000 Voucher", "Retail", 100, 12, 480, "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop", "Electronics, fashion, home goods. Z-Coin users save extra on checkout."),
+            ("H&M Fashion Gift Card", "Retail", 75, 15, 350, "https://images.unsplash.com/photo-1595526014635-fef45624d26f?w=300&h=300&fit=crop", "Latest trendy clothing and accessories. Double your savings with coins."),
+            ("Nike Store Credit ₹4500", "Retail", 100, 12, 460, "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop", "Sports shoes, apparel, and gear. Top picks for athletes using Z-Coins."),
+
+            # Travel & Experiences (3 items, 200-480 coins)
+            ("Uber Ride Credits $50", "Travel", 50, 10, 220, "https://images.unsplash.com/photo-1449965408869-efd32723dfa5?w=300&h=300&fit=crop", "Safe rides to anywhere in the city. Cheaper with Z-Coin redemptions."),
+            ("MakeMyTrip Travel Voucher", "Travel", 100, 8, 480, "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300&h=300&fit=crop", "Book flights, hotels, and vacation packages. Z-Coin discount unlocks best deals."),
+            ("Airbnb Travel Credit $50", "Travel", 50, 12, 230, "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=300&fit=crop", "Unique stays worldwide. Z-Coin users get exclusive discounts."),
+
+            # Entertainment & Streaming (4 items, 50-70 coins)
+            ("Netflix Premium 1M", "Entertainment", 16, 20, 70, "https://images.unsplash.com/photo-1522869635100-ce306162e6f9?w=300&h=300&fit=crop", "Unlimited movies and shows in HD. Pay even less with Z-Coins."),
+            ("Spotify Premium 1M", "Entertainment", 13, 25, 55, "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop", "Ad-free music with offline downloads. Best value with coin discount."),
+            ("Disney+ Subscription", "Entertainment", 12, 22, 52, "https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?w=300&h=300&fit=crop", "Disney, Marvel, Pixar, and more. Huge savings when you use coins."),
+            ("YouTube Premium 1M", "Entertainment", 15, 18, 68, "https://images.unsplash.com/photo-1634438253634-5a34bd7e3f6f?w=300&h=300&fit=crop", "Ad-free videos, downloads, and YouTube Music. Coin redemption saves money."),
+
+            # Fitness & Wellness (3 items, 200-450 coins)
+            ("Cult.Fit Premium 3M", "Fitness", 100, 15, 450, "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&h=300&fit=crop", "Gym classes, yoga, and meditation. Great fitness value with Z-Coin savings."),
+            ("Decathlon Shopping Card", "Fitness", 75, 12, 350, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop", "Sports equipment, apparel, and gear. Z-Coin buyers love the savings."),
+            ("Apple Fitness+ 3M", "Fitness", 45, 20, 200, "https://images.unsplash.com/photo-1524594917303-827c4d8dc422?w=300&h=300&fit=crop", "Premium fitness classes on Apple devices. Discount unlocked with coins."),
+
+            # Tech & Gadgets (3 items, 220-1100 coins)
+            ("Apple AirPods Pro", "Tech", 249, 8, 1100, "https://images.unsplash.com/photo-1606841837239-c5a1a3a07af7?w=300&h=300&fit=crop", "Premium wireless earbuds with noise cancellation. Save $20+ with Z-Coins."),
+            ("Samsung Galaxy Buds", "Tech", 149, 10, 680, "https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=300&h=300&fit=crop", "High-quality sound and comfort. Z-Coin redemption gives extra value."),
+            ("Anker Power Bank 25000mAh", "Tech", 50, 15, 220, "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=300&h=300&fit=crop", "Fast charging and portable. Smart purchase with coin discount."),
         ]
+
         rows = []
-        for i in range(120):
-            name, category, base_price, discount, coins_req = brands[i % len(brands)]
-            multiplier = 1 + (i % 5) * 0.15
+        for name, category, price, discount, coins, image, description in products:
             rows.append((
-                f"{name} #{i + 1}",
+                name,
                 category,
-                round(base_price * multiplier, 2),
-                min(20, discount + (i % 4)),
-                int(coins_req * multiplier),
-                10 + (i % 40),
+                price,
+                discount,
+                coins,
+                image,
+                description,
             ))
 
         cursor.executemany("""
-            INSERT INTO products (name, category, base_price, coin_discount_pct, coins_required, stock)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, rows)
+            INSERT INTO products (name, category, base_price, coin_discount_pct, coins_required, image_url, description, rating, review_count, stock)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [(*row, 4.5 + (hash(row[0]) % 10) / 10, 100 + (hash(row[0]) % 200), 50) for row in rows])
 
     def get_user(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID."""
@@ -649,25 +679,27 @@ class Database:
         club_name: Optional[str],
         invite_code: Optional[str],
         first_scratch_card_id: int,
+        club_id: Optional[int] = None,
     ) -> None:
         """Mark forced Z-World onboarding complete."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO z_world_onboarding (
-                    user_id, intro_seen, club_action, club_name, invite_code,
+                    user_id, intro_seen, club_action, club_name, club_id, invite_code,
                     accepted_coin_rules, signup_bonus_granted, first_scratch_card_id, completed_at
                 )
-                VALUES (?, 1, ?, ?, ?, 1, 1, ?, CURRENT_TIMESTAMP)
+                VALUES (?, 1, ?, ?, ?, ?, 1, 1, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(user_id) DO UPDATE SET
                     intro_seen = 1,
                     club_action = excluded.club_action,
                     club_name = excluded.club_name,
+                    club_id = excluded.club_id,
                     invite_code = excluded.invite_code,
                     accepted_coin_rules = 1,
                     first_scratch_card_id = excluded.first_scratch_card_id,
                     completed_at = COALESCE(z_world_onboarding.completed_at, CURRENT_TIMESTAMP)
-            """, (user_id, club_action, club_name, invite_code, first_scratch_card_id))
+            """, (user_id, club_action, club_name, club_id, invite_code, first_scratch_card_id))
 
     def grant_game_entitlement(self, user_id: int, entitlement_type: str, source_event: str, count: int) -> int:
         """Grant game plays earned through behavior."""
@@ -765,6 +797,27 @@ class Database:
             """, (user_id, limit))
             return [dict(row) for row in cursor.fetchall()]
 
+    def has_payment_reward_today(self, user_id: int) -> bool:
+        """Check if user already claimed payment reward today.
+
+        Prevents double-claiming of on_time_payment rewards on the same day.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            True if a payment reward already exists today, False otherwise
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM financial_events
+                WHERE user_id = ? AND event_type = ? AND status = ?
+                AND DATE(created_at) = DATE('now')
+            """, (user_id, 'payment_completed_on_time', 'rewarded'))
+            count = cursor.fetchone()[0]
+            return count > 0
+
     def get_verified_behavior_count(self, user_id: int) -> int:
         """Get count of verified behaviors for a user (same as count_verified_behaviors).
 
@@ -844,6 +897,16 @@ class Database:
                 WHERE id = ?
             """, (result, coins_won, trigger_id))
 
+    def mark_scratch_card_scratched(self, trigger_id: int, result: str, coins_won: int) -> None:
+        """Alias for complete_scratch_card for consistency.
+
+        Args:
+            trigger_id: Scratch card trigger ID
+            result: Result type (e.g., 'small_win', 'medium_win', 'jackpot', 'try_again')
+            coins_won: Number of coins won
+        """
+        self.complete_scratch_card(trigger_id, result, coins_won)
+
     def add_easter_egg(self, user_id: int, egg_type: str) -> int:
         """Create an easter egg for a user when a condition is met.
 
@@ -897,6 +960,21 @@ class Database:
             )
             return [dict(row) for row in cursor.fetchall()]
 
+    def get_easter_egg(self, egg_id: int) -> Optional[Dict[str, Any]]:
+        """Get a single easter egg by ID.
+
+        Args:
+            egg_id: Easter egg ID
+
+        Returns:
+            dict with easter egg data or None if not found
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM easter_eggs WHERE id = ?", (egg_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
     def claim_easter_egg(self, egg_id: int, user_id: int) -> Dict[str, Any]:
         """Claim an easter egg and mark it as unlocked.
 
@@ -929,3 +1007,52 @@ class Database:
                 (egg_id,),
             )
             return dict(cursor.fetchone())
+
+    def reset_onboarding(self, user_id: int) -> None:
+        """Reset onboarding state for a clean demo run.
+
+        Args:
+            user_id: User ID to reset
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM z_world_onboarding WHERE user_id = ?", (user_id,))
+
+    def reset_user_balance(self, user_id: int) -> None:
+        """Reset user balance and tier for a fresh demo.
+
+        Args:
+            user_id: User ID to reset
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET coin_balance = 0, tier = 'Basic' WHERE id = ?",
+                (user_id,),
+            )
+
+    def reset_demo_state(self, user_id: int) -> None:
+        """Complete reset of all demo state for a user, enabling a fresh start.
+
+        Clears all game progress, notifications, and financial events while preserving
+        user identity. This is idempotent and safe to call multiple times.
+
+        Args:
+            user_id: User ID to reset (typically 1 for demo)
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM z_world_onboarding WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM game_entitlements WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM scratch_card_triggers WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM financial_events WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM easter_eggs WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM coin_transactions WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM behaviors WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM ad_views WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM tier_events WHERE user_id = ?", (user_id,))
+            cursor.execute(
+                "UPDATE users SET coin_balance = 0, tier = 'Basic', withdrawable_balance = 0 WHERE id = ?",
+                (user_id,),
+            )
